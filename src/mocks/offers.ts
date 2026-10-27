@@ -16,7 +16,7 @@ export const offers: Offer[] = [
     maxAdults: 4,
     goods: ['Wi-Fi', 'Washing machine', 'Towels', 'Heating', 'Coffee machine', 'Kitchen', 'Dishwasher', 'Fridge'],
     city: 'Amsterdam',
-    location: { latitude: 52.390955, longitude: 4.853096 },
+    location: { latitude: 52.3909553943508, longitude: 4.85309666406198 },
     host: { name: 'Angelina', avatarUrl: '/img/avatar-angelina.jpg', isPro: true },
     reviews: [
       {
@@ -43,7 +43,7 @@ export const offers: Offer[] = [
     maxAdults: 2,
     goods: ['Wi-Fi', 'Towels', 'Heating', 'Kitchen'],
     city: 'Amsterdam',
-    location: { latitude: 52.369553, longitude: 4.853096 },
+    location: { latitude: 52.3609553943508, longitude: 4.85309666406198 },
     host: { name: 'Max', avatarUrl: '/img/avatar-max.jpg', isPro: false },
     reviews: [],
   },
@@ -62,7 +62,7 @@ export const offers: Offer[] = [
     maxAdults: 2,
     goods: ['Wi-Fi', 'Washing machine', 'Towels', 'Coffee machine', 'Kitchen', 'Fridge'],
     city: 'Amsterdam',
-    location: { latitude: 52.390955, longitude: 4.929309 },
+    location: { latitude: 52.3909553943508, longitude: 4.929309666406198 },
     host: { name: 'Angelina', avatarUrl: '/img/avatar-angelina.jpg', isPro: true },
     reviews: [
       {
@@ -89,7 +89,7 @@ export const offers: Offer[] = [
     maxAdults: 4,
     goods: ['Wi-Fi', 'Washing machine', 'Towels', 'Heating', 'Baby seat', 'Kitchen', 'Dishwasher'],
     city: 'Amsterdam',
-    location: { latitude: 52.380955, longitude: 4.939309 },
+    location: { latitude: 52.3809553943508, longitude: 4.939309666406198 },
     host: { name: 'Angelina', avatarUrl: '/img/avatar-angelina.jpg', isPro: true },
     reviews: [],
   },
