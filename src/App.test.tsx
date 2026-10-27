@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 import PrivateRoute from './components/PrivateRoute';
@@ -20,6 +21,37 @@ describe('Application routing', () => {
     expect(screen.getAllByRole('article')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: offers[0].title })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: offers[1].title })).toBeInTheDocument();
+  });
+
+  it('updates map markers when the supplied offers change in Strict Mode', () => {
+    const { rerender } = render(<StrictMode><App offers={offers} /></StrictMode>);
+    const map = screen.getByRole('region', { name: 'Rental offers map' });
+
+    expect(within(map).getAllByRole('img')).toHaveLength(offers.length);
+    offers.forEach((offer) => {
+      expect(within(map).getByRole('img', { name: offer.title })).toHaveAttribute('src', '/img/pin.svg');
+    });
+    expect(within(map).getByRole('link', { name: 'OpenStreetMap' })).toBeInTheDocument();
+
+    rerender(<StrictMode><App offers={offers.slice(1, 3)} /></StrictMode>);
+
+    expect(within(map).getAllByRole('img')).toHaveLength(2);
+    expect(within(map).queryByRole('img', { name: offers[0].title })).not.toBeInTheDocument();
+    expect(within(map).queryByRole('img', { name: offers[3].title })).not.toBeInTheDocument();
+    expect(within(map).getByRole('img', { name: offers[1].title })).toBeInTheDocument();
+    expect(within(map).getByRole('img', { name: offers[2].title })).toBeInTheDocument();
+  });
+
+  it('shows only Amsterdam offers in the list and on the map', () => {
+    const parisOffer = { ...offers[0], id: 'paris-apartment', city: 'Paris', title: 'Paris apartment' };
+    render(<App offers={[...offers, parisOffer]} />);
+
+    expect(screen.getByText('4 places to stay in Amsterdam')).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(4);
+    expect(screen.queryByRole('heading', { name: parisOffer.title })).not.toBeInTheDocument();
+    const map = screen.getByRole('region', { name: 'Rental offers map' });
+    expect(within(map).getAllByRole('img')).toHaveLength(4);
+    expect(within(map).queryByRole('img', { name: parisOffer.title })).not.toBeInTheDocument();
   });
 
   it('opens the login page by its address', () => {

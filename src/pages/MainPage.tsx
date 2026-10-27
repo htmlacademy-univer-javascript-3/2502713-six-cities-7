@@ -1,10 +1,16 @@
 import Header from '../components/Header';
+import Map from '../components/Map';
 import OffersList from '../components/OffersList';
 import { Offer } from '../types/offer';
 
 type MainPageProps = { offers: Offer[] };
 
+const amsterdamCenter = { latitude: 52.376, longitude: 4.896 };
+const mapZoom = 12;
+
 function MainPage({ offers }: MainPageProps) {
+  const cityOffers = offers.filter((offer) => offer.city === 'Amsterdam');
+
   return (
     <div className="page page--gray page--main">
       <Header favoritesCount={offers.filter((offer) => offer.isFavorite).length} />
@@ -15,7 +21,7 @@ function MainPage({ offers }: MainPageProps) {
           <div className="cities__places-container container">
             <section className="cities__places places">
               <h2 className="visually-hidden">Places</h2>
-              <b className="places__found">{offers.length} places to stay in Amsterdam</b>
+              <b className="places__found">{cityOffers.length} places to stay in Amsterdam</b>
               <form className="places__sorting" action="#" method="get">
                 <span className="places__sorting-caption">Sort by</span>
                 <span className="places__sorting-type" tabIndex={0}>Popular<svg className="places__sorting-arrow" width="7" height="4"><use xlinkHref="#icon-arrow-select" /></svg></span>
@@ -26,9 +32,11 @@ function MainPage({ offers }: MainPageProps) {
                   <li className="places__option" tabIndex={0}>Top rated first</li>
                 </ul>
               </form>
-              <OffersList offers={offers} />
+              <OffersList offers={cityOffers} />
             </section>
-            <div className="cities__right-section"><section className="cities__map map" /></div>
+            <div className="cities__right-section">
+              <Map center={amsterdamCenter} zoom={mapZoom} offers={cityOffers} />
+            </div>
           </div>
         </div>
       </main>
