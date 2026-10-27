@@ -69,7 +69,21 @@ describe('Application routing', () => {
     expect(screen.getByText(offer.description)).toBeInTheDocument();
     expect(screen.getByText(`Max ${offer.maxAdults} adults`)).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Your review' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: `Reviews · ${offer.reviews.length}` })).toBeInTheDocument();
+    offer.reviews.forEach((review) => {
+      expect(screen.getByText(review.comment)).toBeInTheDocument();
+    });
     expect(screen.getAllByRole('article')).toHaveLength(offers.length - 1);
+
+    const map = screen.getByRole('region', { name: 'Rental offers map' });
+    expect(map).toHaveClass('offer__map');
+    expect(within(map).getAllByRole('img')).toHaveLength(3);
+    expect(within(map).queryByRole('img', { name: offer.title })).not.toBeInTheDocument();
+    screen.getAllByRole('article').forEach((card) => {
+      expect(card).toHaveClass('near-places__card');
+      const title = within(card).getByRole('heading').textContent as string;
+      expect(within(map).getByRole('img', { name: title })).toBeInTheDocument();
+    });
   });
 
   it('opens the matching offer when its card title is clicked', async () => {
@@ -95,6 +109,13 @@ describe('Application routing', () => {
     expect(screen.getByRole('heading', { level: 1, name: offers[1].title })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Your review' })).toHaveValue('');
     expect(screen.getByRole('radio', { name: 'good' })).not.toBeChecked();
+    expect(screen.getByRole('heading', { name: 'Reviews · 0' })).toBeInTheDocument();
+    expect(screen.queryByText(offers[0].reviews[0].comment)).not.toBeInTheDocument();
+
+    const map = screen.getByRole('region', { name: 'Rental offers map' });
+    expect(within(map).getAllByRole('img')).toHaveLength(3);
+    expect(within(map).getByRole('img', { name: offers[0].title })).toBeInTheDocument();
+    expect(within(map).queryByRole('img', { name: offers[1].title })).not.toBeInTheDocument();
   });
 
   it('shows 404 for an offer id missing from the supplied data', () => {
