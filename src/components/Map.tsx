@@ -7,6 +7,7 @@ type MapProps = {
   center: Offer['location'];
   zoom: number;
   offers: Offer[];
+  variant?: 'cities' | 'offer';
 };
 
 const offerIcon = new Icon({
@@ -15,7 +16,7 @@ const offerIcon = new Icon({
   iconAnchor: [13.5, 39],
 });
 
-function Map({ center: { latitude, longitude }, zoom, offers }: MapProps) {
+function Map({ center: { latitude, longitude }, zoom, offers, variant = 'cities' }: MapProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
 
@@ -62,7 +63,7 @@ function Map({ center: { latitude, longitude }, zoom, offers }: MapProps) {
     };
   }, [offers]);
 
-  return <section className='cities__map map' ref={containerRef} aria-label='Rental offers map' />;
+  return <section className={`${variant}__map map`} ref={containerRef} aria-label='Rental offers map' />;
 }
 
 export default Map;
