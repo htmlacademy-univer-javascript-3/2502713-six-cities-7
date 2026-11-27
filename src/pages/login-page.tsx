@@ -1,6 +1,10 @@
+import { useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
+import { changeCity } from '../store/action';
 
 function LoginPage() {
+  const dispatch = useDispatch();
+
   return (
     <div className='page page--gray page--login'>
       <header className='header'>
@@ -40,7 +44,7 @@ function LoginPage() {
           </section>
           <section className='locations locations--login locations--current'>
             <div className='locations__item'>
-              <Link className='locations__item-link' to='/'>
+              <Link className='locations__item-link' to='/' onClick={() => dispatch(changeCity('Amsterdam'))}>
                 <span>
                   Amsterdam
                 </span>

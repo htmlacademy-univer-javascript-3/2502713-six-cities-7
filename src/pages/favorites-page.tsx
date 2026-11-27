@@ -1,13 +1,13 @@
+import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import Header from '../components/Header';
-import OffersList from '../components/OffersList';
-import { Offer } from '../types/offer';
+import Header from '../components/header';
+import OffersList from '../components/offers-list';
+import { changeCity } from '../store/action';
+import { selectFavoriteOffers } from '../store/selectors';
 
-type FavoritesPageProps = {
-  offers: Offer[];
-};
-
-function FavoritesPage({ offers }: FavoritesPageProps) {
+function FavoritesPage() {
+  const dispatch = useDispatch();
+  const offers = useSelector(selectFavoriteOffers);
   const cities = [...new Set(offers.map((offer) => offer.city))];
   const isEmpty = offers.length === 0;
 
@@ -33,7 +33,7 @@ function FavoritesPage({ offers }: FavoritesPageProps) {
                     <li className='favorites__locations-items' key={city}>
                       <div className='favorites__locations locations locations--current'>
                         <div className='locations__item'>
-                          <Link className='locations__item-link' to='/'><span>{city}</span></Link>
+                          <Link className='locations__item-link' to='/' onClick={() => dispatch(changeCity(city))}><span>{city}</span></Link>
                         </div>
                       </div>
                       <OffersList offers={offers.filter((offer) => offer.city === city)} variant='favorites' />
