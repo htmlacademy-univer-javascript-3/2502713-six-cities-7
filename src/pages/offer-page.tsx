@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import CommentForm from '../components/comment-form';
@@ -6,6 +7,7 @@ import Map from '../components/map';
 import OffersList from '../components/offers-list';
 import ReviewsList from '../components/reviews-list';
 import { selectFavoriteOffers, selectOffers } from '../store/selectors';
+import type { Offer } from '../types/offer';
 import NotFoundPage from './not-found-page';
 
 function OfferPage() {
@@ -13,12 +15,16 @@ function OfferPage() {
   const offers = useSelector(selectOffers);
   const favorites = useSelector(selectFavoriteOffers);
   const offer = offers.find((item) => item.id === id);
+  const [activeOfferId, setActiveOfferId] = useState<Offer['id'] | null>(null);
+  const city = offer?.city;
+  const nearbyOffers = useMemo(
+    () => offers.filter((item) => item.id !== id && item.city === city).slice(0, 3),
+    [offers, id, city]
+  );
 
   if (!offer) {
     return <NotFoundPage />;
   }
-
-  const nearbyOffers = offers.filter((item) => item.id !== offer.id && item.city === offer.city).slice(0, 3);
 
   return (
     <div className='page'>
@@ -83,13 +89,13 @@ function OfferPage() {
               </section>
             </div>
           </div>
-          <Map center={offer.location} zoom={12} offers={nearbyOffers} variant='offer' />
+          <Map center={offer.location} zoom={12} offers={nearbyOffers} activeOfferId={activeOfferId} variant='offer' />
         </section>
         {nearbyOffers.length > 0 && (
           <div className='container'>
             <section className='near-places places'>
               <h2 className='near-places__title'>Other places in the neighbourhood</h2>
-              <OffersList offers={nearbyOffers} variant='near-places' />
+              <OffersList offers={nearbyOffers} variant='near-places' onActiveOfferChange={setActiveOfferId} />
             </section>
           </div>
         )}

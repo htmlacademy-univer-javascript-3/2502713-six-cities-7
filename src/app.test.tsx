@@ -52,6 +52,56 @@ describe('Application routing', () => {
     expect(within(map).getByRole('link', { name: 'OpenStreetMap' })).toBeInTheDocument();
   });
 
+  it('sorts by price and rating and restores the original order with Popular', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Amsterdam' }));
+
+    const [apartment, room, canal, cozy] = amsterdamOffers;
+    const cardTitles = () => screen.getAllByRole('article').map((card) => within(card).getByRole('heading').textContent);
+    const sortButton = () => screen.getByRole('button', { name: /^Sort by / });
+    expect(sortButton()).toHaveAccessibleName('Sort by Popular');
+    expect(cardTitles()).toEqual(amsterdamOffers.map((offer) => offer.title));
+
+    const cases = [
+      { option: 'Price: low to high', order: [room, apartment, canal, cozy] },
+      { option: 'Price: high to low', order: [cozy, canal, apartment, room] },
+      { option: 'Top rated first', order: [cozy, apartment, canal, room] },
+      { option: 'Popular', order: amsterdamOffers },
+    ];
+
+    for (const { option, order } of cases) {
+      await user.click(sortButton());
+      await user.click(screen.getByRole('button', { name: option }));
+      expect(sortButton()).toHaveAccessibleName(`Sort by ${option}`);
+      expect(sortButton()).toHaveAttribute('aria-expanded', 'false');
+      expect(cardTitles()).toEqual(order.map((offer) => offer.title));
+    }
+  });
+
+  it('highlights only the marker for the hovered card after sorting and clears it on leave', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Sort by Popular' }));
+    await user.click(screen.getByRole('button', { name: 'Price: low to high' }));
+
+    const [firstCard, secondCard] = screen.getAllByRole('article');
+    const map = within(screen.getByRole('region', { name: 'Rental offers map' }));
+    const firstPin = map.getByRole('img', { name: parisOffers[1].title });
+    const secondPin = map.getByRole('img', { name: parisOffers[0].title });
+
+    await user.hover(firstCard);
+    expect(firstPin).toHaveAttribute('src', '/img/pin-active.svg');
+    expect(secondPin).toHaveAttribute('src', '/img/pin.svg');
+
+    await user.hover(secondCard);
+    expect(firstPin).toHaveAttribute('src', '/img/pin.svg');
+    expect(secondPin).toHaveAttribute('src', '/img/pin-active.svg');
+
+    await user.unhover(secondCard);
+    expect(secondPin).toHaveAttribute('src', '/img/pin.svg');
+  });
+
   it('replaces the city results and markers when new offers are loaded', () => {
     const store = renderApp();
     act(() => {

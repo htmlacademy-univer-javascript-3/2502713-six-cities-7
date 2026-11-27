@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Icon, Map as LeafletMap, layerGroup, marker, tileLayer } from 'leaflet';
+import type { Marker } from 'leaflet';
 import { Offer } from '../types/offer';
 import 'leaflet/dist/leaflet.css';
 
@@ -7,6 +8,7 @@ type MapProps = {
   center: Offer['location'];
   zoom: number;
   offers: Offer[];
+  activeOfferId: Offer['id'] | null;
   variant?: 'cities' | 'offer';
 };
 
@@ -16,9 +18,15 @@ const offerIcon = new Icon({
   iconAnchor: [13.5, 39],
 });
 
-function Map({ center: { latitude, longitude }, zoom, offers, variant = 'cities' }: MapProps) {
+const activeOfferIcon = new Icon({
+  ...offerIcon.options,
+  iconUrl: '/img/pin-active.svg',
+});
+
+function OffersMap({ center: { latitude, longitude }, zoom, offers, activeOfferId, variant = 'cities' }: MapProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
+  const markersByIdRef = useRef(new Map<Offer['id'], Marker>());
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -49,21 +57,36 @@ function Map({ center: { latitude, longitude }, zoom, offers, variant = 'cities'
     }
 
     const markers = layerGroup().addTo(mapRef.current);
+    const markersById = markersByIdRef.current;
 
     offers.forEach((offer) => {
-      marker([offer.location.latitude, offer.location.longitude], {
+      const offerMarker = marker([offer.location.latitude, offer.location.longitude], {
         icon: offerIcon,
         title: offer.title,
         alt: offer.title,
       }).addTo(markers);
+      markersById.set(offer.id, offerMarker);
     });
 
     return () => {
       markers.remove();
+      markersById.clear();
     };
   }, [offers]);
+
+  useEffect(() => {
+    const activeMarker = activeOfferId === null ? undefined : markersByIdRef.current.get(activeOfferId);
+    if (!activeMarker) {
+      return;
+    }
+
+    activeMarker.setIcon(activeOfferIcon).setZIndexOffset(1000);
+    return () => {
+      activeMarker.setIcon(offerIcon).setZIndexOffset(0);
+    };
+  }, [activeOfferId, offers]);
 
   return <section className={`${variant}__map map`} ref={containerRef} aria-label='Rental offers map' />;
 }
 
-export default Map;
+export default OffersMap;
