@@ -1,18 +1,17 @@
+import { useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
-import CommentForm from '../components/CommentForm';
-import Header from '../components/Header';
-import Map from '../components/Map';
-import OffersList from '../components/OffersList';
-import ReviewsList from '../components/ReviewsList';
-import { Offer } from '../types/offer';
-import NotFoundPage from './NotFoundPage';
+import CommentForm from '../components/comment-form';
+import Header from '../components/header';
+import Map from '../components/map';
+import OffersList from '../components/offers-list';
+import ReviewsList from '../components/reviews-list';
+import { selectFavoriteOffers, selectOffers } from '../store/selectors';
+import NotFoundPage from './not-found-page';
 
-type OfferPageProps = {
-  offers: Offer[];
-};
-
-function OfferPage({ offers }: OfferPageProps) {
+function OfferPage() {
   const { id } = useParams();
+  const offers = useSelector(selectOffers);
+  const favorites = useSelector(selectFavoriteOffers);
   const offer = offers.find((item) => item.id === id);
 
   if (!offer) {
@@ -23,7 +22,7 @@ function OfferPage({ offers }: OfferPageProps) {
 
   return (
     <div className='page'>
-      <Header favoritesCount={offers.filter((item) => item.isFavorite).length} />
+      <Header favoritesCount={favorites.length} />
       <main className='page__main page__main--offer'>
         <section className='offer'>
           <div className='offer__gallery-container container'>

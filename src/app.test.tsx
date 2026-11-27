@@ -1,11 +1,30 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { configureStore } from '@reduxjs/toolkit';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
-import App from './App';
-import PrivateRoute from './components/PrivateRoute';
+import { Provider } from 'react-redux';
+import App from './app';
 import { offers } from './mocks/offers';
-import FavoritesPage from './pages/FavoritesPage';
+import { loadOffers } from './store/action';
+import { reducer } from './store/reducer';
+
+const parisOffers = offers.filter((offer) => offer.city === 'Paris');
+const amsterdamOffers = offers.filter((offer) => offer.city === 'Amsterdam');
+
+function renderApp({ initialOffers = offers, isAuthorized = false } = {}) {
+  const store = configureStore({ reducer });
+  store.dispatch(loadOffers(initialOffers));
+
+  render(
+    <StrictMode>
+      <Provider store={store}>
+        <App isAuthorized={isAuthorized} />
+      </Provider>
+    </StrictMode>
+  );
+
+  return store;
+}
 
 describe('Application routing', () => {
   beforeEach(() => {
@@ -14,56 +33,74 @@ describe('Application routing', () => {
 
   afterEach(cleanup);
 
-  it('shows the supplied offers and calculates their count', () => {
-    render(<App offers={offers.slice(0, 2)} />);
+  it('selects Paris on startup and lists the six cities in order', () => {
+    renderApp();
 
-    expect(screen.getByText('2 places to stay in Amsterdam')).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(2);
-    expect(screen.getByRole('heading', { name: offers[0].title })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: offers[1].title })).toBeInTheDocument();
-  });
-
-  it('updates map markers when the supplied offers change in Strict Mode', () => {
-    const { rerender } = render(<StrictMode><App offers={offers} /></StrictMode>);
+    const cityList = screen.getByRole('region', { name: 'Cities' });
+    expect(within(cityList).getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Paris', 'Cologne', 'Brussels', 'Amsterdam', 'Hamburg', 'Dusseldorf',
+    ]);
+    expect(within(cityList).getByRole('button', { name: 'Paris', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '2 places to stay in Paris' })).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(parisOffers.length);
     const map = screen.getByRole('region', { name: 'Rental offers map' });
-
-    expect(within(map).getAllByRole('img')).toHaveLength(offers.length);
-    offers.forEach((offer) => {
+    expect(within(map).getAllByRole('img')).toHaveLength(parisOffers.length);
+    parisOffers.forEach((offer) => {
+      expect(screen.getByRole('heading', { name: offer.title })).toBeInTheDocument();
       expect(within(map).getByRole('img', { name: offer.title })).toHaveAttribute('src', '/img/pin.svg');
     });
     expect(within(map).getByRole('link', { name: 'OpenStreetMap' })).toBeInTheDocument();
-
-    rerender(<StrictMode><App offers={offers.slice(1, 3)} /></StrictMode>);
-
-    expect(within(map).getAllByRole('img')).toHaveLength(2);
-    expect(within(map).queryByRole('img', { name: offers[0].title })).not.toBeInTheDocument();
-    expect(within(map).queryByRole('img', { name: offers[3].title })).not.toBeInTheDocument();
-    expect(within(map).getByRole('img', { name: offers[1].title })).toBeInTheDocument();
-    expect(within(map).getByRole('img', { name: offers[2].title })).toBeInTheDocument();
   });
 
-  it('shows only Amsterdam offers in the list and on the map', () => {
-    const parisOffer = { ...offers[0], id: 'paris-apartment', city: 'Paris', title: 'Paris apartment' };
-    render(<App offers={[...offers, parisOffer]} />);
+  it('replaces the city results and markers when new offers are loaded', () => {
+    const store = renderApp();
+    act(() => {
+      store.dispatch(loadOffers([parisOffers[1], ...amsterdamOffers]));
+    });
 
-    expect(screen.getByText('4 places to stay in Amsterdam')).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(4);
-    expect(screen.queryByRole('heading', { name: parisOffer.title })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '1 place to stay in Paris' })).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: parisOffers[1].title })).toBeInTheDocument();
     const map = screen.getByRole('region', { name: 'Rental offers map' });
-    expect(within(map).getAllByRole('img')).toHaveLength(4);
-    expect(within(map).queryByRole('img', { name: parisOffer.title })).not.toBeInTheDocument();
+    expect(within(map).getAllByRole('img')).toHaveLength(1);
+    expect(within(map).getByRole('img', { name: parisOffers[1].title })).toBeInTheDocument();
+  });
+
+  it('updates the heading, cards and markers when switching cities, including an empty city', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Amsterdam' }));
+
+    expect(screen.getByRole('button', { name: 'Amsterdam', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '4 places to stay in Amsterdam' })).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(amsterdamOffers.length);
+    const map = screen.getByRole('region', { name: 'Rental offers map' });
+    expect(within(map).getAllByRole('img')).toHaveLength(amsterdamOffers.length);
+    amsterdamOffers.forEach((offer) => {
+      expect(screen.getByRole('heading', { name: offer.title })).toBeInTheDocument();
+      expect(within(map).getByRole('img', { name: offer.title })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Dusseldorf' }));
+    expect(screen.getByRole('heading', { name: '0 places to stay in Dusseldorf' })).toBeInTheDocument();
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Rental offers map' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Paris' }));
+    expect(screen.getByRole('heading', { name: '2 places to stay in Paris' })).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(parisOffers.length);
   });
 
   it('opens the login page by its address', () => {
     window.history.replaceState(null, '', '/login');
-    render(<App offers={offers} />);
+    renderApp();
 
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it.each(offers)('opens the details for offer $id by its address', (offer) => {
     window.history.replaceState(null, '', `/offer/${offer.id}`);
-    render(<App offers={offers} />);
+    renderApp();
 
     expect(screen.getByRole('heading', { level: 1, name: offer.title })).toBeInTheDocument();
     expect(screen.getByText(offer.description)).toBeInTheDocument();
@@ -73,13 +110,14 @@ describe('Application routing', () => {
     offer.reviews.forEach((review) => {
       expect(screen.getByText(review.comment)).toBeInTheDocument();
     });
-    expect(screen.getAllByRole('article')).toHaveLength(offers.length - 1);
+    const nearbyCount = Math.min(3, offers.filter((item) => item.city === offer.city && item.id !== offer.id).length);
+    expect(screen.queryAllByRole('article')).toHaveLength(nearbyCount);
 
     const map = screen.getByRole('region', { name: 'Rental offers map' });
     expect(map).toHaveClass('offer__map');
-    expect(within(map).getAllByRole('img')).toHaveLength(3);
+    expect(within(map).queryAllByRole('img')).toHaveLength(nearbyCount);
     expect(within(map).queryByRole('img', { name: offer.title })).not.toBeInTheDocument();
-    screen.getAllByRole('article').forEach((card) => {
+    screen.queryAllByRole('article').forEach((card) => {
       expect(card).toHaveClass('near-places__card');
       const title = within(card).getByRole('heading').textContent as string;
       expect(within(map).getByRole('img', { name: title })).toBeInTheDocument();
@@ -88,7 +126,8 @@ describe('Application routing', () => {
 
   it('opens the matching offer when its card title is clicked', async () => {
     const user = userEvent.setup();
-    render(<App offers={offers} />);
+    renderApp();
+    await user.click(screen.getByRole('button', { name: 'Amsterdam' }));
 
     await user.click(within(screen.getByRole('heading', { name: offers[1].title })).getByRole('link'));
 
@@ -100,7 +139,7 @@ describe('Application routing', () => {
   it('resets the comment form when a neighbouring offer is opened', async () => {
     const user = userEvent.setup();
     window.history.replaceState(null, '', `/offer/${offers[0].id}`);
-    render(<App offers={offers} />);
+    renderApp();
     await user.type(screen.getByRole('textbox', { name: 'Your review' }), 'A draft for the first apartment');
     await user.click(screen.getByRole('radio', { name: 'good' }));
 
@@ -120,14 +159,14 @@ describe('Application routing', () => {
 
   it('shows 404 for an offer id missing from the supplied data', () => {
     window.history.replaceState(null, '', '/offer/missing-offer');
-    render(<App offers={offers} />);
+    renderApp();
 
     expect(screen.getByRole('heading', { name: '404 Not Found' })).toBeInTheDocument();
   });
 
   it('redirects an unauthorized visitor from favorites to login', () => {
     window.history.replaceState(null, '', '/favorites');
-    render(<App offers={offers} />);
+    renderApp();
 
     expect(window.location.pathname).toBe('/login');
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
@@ -136,7 +175,7 @@ describe('Application routing', () => {
 
   it('opens favorites from the header and navigates to a saved offer for an authorized visitor', async () => {
     const user = userEvent.setup();
-    render(<App offers={offers} isAuthorized />);
+    renderApp({ isAuthorized: true });
 
     await user.click(screen.getByRole('link', { name: /Oliver.conner@gmail.com/ }));
 
@@ -155,25 +194,20 @@ describe('Application routing', () => {
   it('shows 404 for an unknown nested address and lets the visitor return home', async () => {
     const user = userEvent.setup();
     window.history.replaceState(null, '', '/unknown/nested');
-    render(<App offers={offers} />);
+    renderApp();
 
     expect(screen.getByRole('heading', { name: '404 Not Found' })).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'На главную' }));
 
     expect(window.location.pathname).toBe('/');
-    expect(screen.getByText('4 places to stay in Amsterdam')).toBeInTheDocument();
+    expect(screen.getByText('2 places to stay in Paris')).toBeInTheDocument();
   });
 
   it('allows an authorized visitor to see private content', () => {
     const favoriteOffers = offers.filter((offer) => offer.isFavorite);
 
-    render(
-      <MemoryRouter initialEntries={['/favorites']}>
-        <PrivateRoute isAuthorized>
-          <FavoritesPage offers={favoriteOffers} />
-        </PrivateRoute>
-      </MemoryRouter>
-    );
+    window.history.replaceState(null, '', '/favorites');
+    renderApp({ isAuthorized: true });
 
     expect(screen.getByRole('heading', { name: 'Saved listing' })).toBeInTheDocument();
     expect(screen.getAllByRole('article')).toHaveLength(favoriteOffers.length);
@@ -185,7 +219,8 @@ describe('Application routing', () => {
   });
 
   it('shows the empty favorites page when there are no saved offers', () => {
-    render(<MemoryRouter><FavoritesPage offers={[]} /></MemoryRouter>);
+    window.history.replaceState(null, '', '/favorites');
+    renderApp({ initialOffers: parisOffers, isAuthorized: true });
 
     expect(screen.getByText('Nothing yet saved.')).toBeInTheDocument();
     expect(screen.queryByRole('article')).not.toBeInTheDocument();

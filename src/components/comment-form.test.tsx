@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import CommentForm from './CommentForm';
+import CommentForm from './comment-form';
 
 describe('Comment form', () => {
   afterEach(cleanup);

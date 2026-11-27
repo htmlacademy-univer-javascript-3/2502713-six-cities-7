@@ -1,3 +1,5 @@
+import type { City } from '../cities';
+
 export type Review = {
   id: string;
   user: {
@@ -23,7 +25,7 @@ export type Offer = {
   bedrooms: number;
   maxAdults: number;
   goods: string[];
-  city: string;
+  city: City;
   location: {
     latitude: number;
     longitude: number;
